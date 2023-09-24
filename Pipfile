@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "2.1.1"
+matplotlib = "3.8.0"
+streamlit = "1.27.0"
+openai = "0.28.0"
+langchain = "0.0.300"
+python-dotenv = "1.0.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"
