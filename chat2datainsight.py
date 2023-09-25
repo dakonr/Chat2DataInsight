@@ -44,7 +44,6 @@ def generate_openai_response(
             temperature=temperature,
             openai_api_key=st.session_state.get("OPENAI_API_KEY"),
         )
-    # df = load_file(file)
     # Pandas Dataframe Agent
     agent = create_pandas_dataframe_agent(
         llm,
@@ -106,7 +105,6 @@ def generate_openai_response(
                 "Unfortunately the code generated from the model contained errors and was unable to execute. Please run again"
             )
     return response
-
 
 # Frontend Logic
 def sidebar_toggle_helper() -> str:
