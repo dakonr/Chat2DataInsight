@@ -22,11 +22,11 @@ def load_file(filename):
     return df
 #Generate LLM Response
 def generate_openai_response(df, input_query, model_name='gpt-3.5-turbo-0301', temperature=0.1, callbacks=None):
-    response = None
+    response = dict()
     if model_name in ("text-davinci-003", "gpt-3.5-turbo-instruct"):
-         llm = OpenAI(model_name=model_name, temperature=temperature, openai_api_key=st.secrets.get("OPENAI_API_KEY"))
+         llm = OpenAI(model_name=model_name, temperature=temperature, openai_api_key=st.session_state.get("OPENAI_API_KEY"))
     elif model_name in ("gpt-3.5-turbo-0301", "gpt-3.5-turbo", "gpt-4"):
-         llm = ChatOpenAI(model_name=model_name, temperature=temperature, openai_api_key=st.secrets.get("OPENAI_API_KEY"))
+         llm = ChatOpenAI(model_name=model_name, temperature=temperature, openai_api_key=st.session_state.get("OPENAI_API_KEY"))
     #df = load_file(file)
     #Pandas Dataframe Agent
     agent = create_pandas_dataframe_agent(
@@ -57,9 +57,9 @@ def generate_openai_response(df, input_query, model_name='gpt-3.5-turbo-0301', t
         elif type(e) == openai.error.ServiceUnavailableError:
             st.error("OpenAI Service is currently unavailable. Please try again a short time later. (" + str(e) + ")")
         elif type(e) == OutputParserException:
-            st.error("Unfortunately the code generated from the model contained errors and was unable to execute or parsable.")
+            st.error("Unfortunately the code generated from the model contained errors and was unable to execute or parsable. Please run again")
         else:
-            st.error("Unfortunately the code generated from the model contained errors and was unable to execute.")
+            st.error("Unfortunately the code generated from the model contained errors and was unable to execute. Please run again")
     return response
 
 #Frontend Logic
@@ -70,7 +70,11 @@ st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>Creating Visualis
             with ChatGPT</h2>", unsafe_allow_html=True)
 
 with st.sidebar:
-     model_name = st.selectbox("Model: ", available_models.keys())
+    model_name = st.selectbox("Model: ", available_models.keys())
+    if openai_key := st.secrets.get("OPENAI_API_KEY"):
+        st.session_state["OPENAI_API_KEY"] = openai_key
+    else:
+        st.session_state["OPENAI_API_KEY"] = st.text_input(label = ":key: OpenAI Key:", help="Required for ChatGPT-4, ChatGPT-3.5, GPT-3, GPT-3.5 Instruct.",type="password")
 
 uploaded_file = st.file_uploader(":computer: Choose a file", accept_multiple_files=False, type=['csv'])
 if uploaded_file is not None:
