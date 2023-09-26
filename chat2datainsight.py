@@ -122,7 +122,9 @@ def generate_langchain_response(
 
 # Frontend Logic
 def sidebar_toggle_helper() -> str:
-    if st.secrets.has_key("OPENAI_API_KEY") or st.secrets.has_key("HUGGINGFACE_API_KEY"):
+    if st.secrets.has_key("OPENAI_API_KEY") or st.secrets.has_key(
+        "HUGGINGFACE_API_KEY"
+    ):
         return "collapsed"
     return "expanded"
 
@@ -170,12 +172,12 @@ if uploaded_file is not None:
     # read file to dataframe in dataset session state
     st.session_state["dataset"] = load_file(uploaded_file)
 
-if st.session_state.get("dataset") is not None:
-    st.header("Output")
-
 prompt = st.text_area(":eyes: What would you like to analyze?", height=10)
 btn_go = st.button("Go...", use_container_width=True)
+
+
 if prompt and btn_go:
+    st.header("Output")
     st_cb = StreamlitCallbackHandler(
         st.container(), expand_new_thoughts=True, collapse_completed_thoughts=False
     )
