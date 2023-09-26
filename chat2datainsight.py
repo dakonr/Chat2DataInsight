@@ -1,16 +1,16 @@
-import pandas as pd
-import openai
-import streamlit as st
-import warnings, os, json
-from langchain import HuggingFaceHub
-from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAI
-from langchain.callbacks import StreamlitCallbackHandler
-from langchain.agents import create_pandas_dataframe_agent
-from langchain.agents.agent_types import AgentType
-from langchain.schema.output_parser import OutputParserException
+import os
 
 import matplotlib.pyplot as plt
+import openai
+import pandas as pd
+import streamlit as st
+from langchain import HuggingFaceHub
+from langchain.agents import create_pandas_dataframe_agent
+from langchain.agents.agent_types import AgentType
+from langchain.callbacks import StreamlitCallbackHandler
+from langchain.chat_models import ChatOpenAI
+from langchain.llms import OpenAI
+from langchain.schema.output_parser import OutputParserException
 
 # Models
 available_models = {
@@ -48,13 +48,15 @@ def generate_langchain_response(
             openai_api_key=st.session_state.get("OPENAI_API_KEY"),
         )
     elif model_name in ("CodeLlama-34b-Instruct-hf", "CodeLlama-7b-Python-hf"):
-        #For HuggingFaceHub, the API Key must be in environment variable otherwise it won't work
-        os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.session_state.get("HUGGINGFACE_API_KEY")
+        # For HuggingFaceHub, the API Key must be in environment variable otherwise it won't work
+        os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.session_state.get(
+            "HUGGINGFACE_API_KEY"
+        )
         llm = HuggingFaceHub(
-            huggingfacehub_api_token = st.session_state.get("HUGGINGFACE_API_KEY"),
+            huggingfacehub_api_token=st.session_state.get("HUGGINGFACE_API_KEY"),
             repo_id="codellama/" + model_name,
-            model_kwargs={"temperature":0.1, "max_new_tokens":500}
-            )
+            model_kwargs={"temperature": 0.1, "max_new_tokens": 500},
+        )
     # Pandas Dataframe Agent
     agent = create_pandas_dataframe_agent(
         llm,
@@ -116,6 +118,7 @@ def generate_langchain_response(
                 "Unfortunately the code generated from the model contained errors and was unable to execute. Please run again"
             )
     return response
+
 
 # Frontend Logic
 def sidebar_toggle_helper() -> str:
