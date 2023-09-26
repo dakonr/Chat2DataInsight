@@ -2,6 +2,7 @@ import pandas as pd
 import openai
 import streamlit as st
 import warnings, os, json
+from langchain import HuggingFaceHub
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.callbacks import StreamlitCallbackHandler
@@ -17,6 +18,8 @@ available_models = {
     "ChatGPT-4": "gpt-4",
     "GPT-3": "text-davinci-003",
     "GPT-3.5 Instruct": "gpt-3.5-turbo-instruct",
+    "Code Llama Instruct": "CodeLlama-34b-Instruct-hf",
+    "Code Llama Python 7b": "CodeLlama-7b-Python-hf",
 }
 
 # Chat Logic
@@ -28,7 +31,7 @@ def load_file(filename):
 
 
 # Generate LLM Response
-def generate_openai_response(
+def generate_langchain_response(
     df, input_query, model_name="gpt-3.5-turbo-0301", temperature=0.1, callbacks=None
 ):
     response = dict()
@@ -44,6 +47,14 @@ def generate_openai_response(
             temperature=temperature,
             openai_api_key=st.session_state.get("OPENAI_API_KEY"),
         )
+    elif model_name in ("CodeLlama-34b-Instruct-hf", "CodeLlama-7b-Python-hf"):
+        #For HuggingFaceHub, the API Key must be in environment variable otherwise it won't work
+        os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.session_state.get("HUGGINGFACE_API_KEY")
+        llm = HuggingFaceHub(
+            huggingfacehub_api_token = st.session_state.get("HUGGINGFACE_API_KEY"),
+            repo_id="codellama/" + model_name,
+            model_kwargs={"temperature":0.1, "max_new_tokens":500}
+            )
     # Pandas Dataframe Agent
     agent = create_pandas_dataframe_agent(
         llm,
@@ -166,7 +177,7 @@ if prompt and btn_go:
         st.container(), expand_new_thoughts=True, collapse_completed_thoughts=False
     )
     df = st.session_state.get("dataset").copy()
-    response = generate_openai_response(
+    response = generate_langchain_response(
         df, prompt, model_name=available_models.get(model_name), callbacks=[st_cb]
     )
     st.write(response.get("output"))
