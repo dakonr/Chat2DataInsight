@@ -11,6 +11,7 @@ from langchain.callbacks import StreamlitCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.schema.output_parser import OutputParserException
+from typing import MutableMapping
 
 # Models
 available_models = {
@@ -22,18 +23,33 @@ available_models = {
     "Code Llama Python 7b": "CodeLlama-7b-Python-hf",
 }
 
+file_formats = {
+    "csv": pd.read_csv,
+    "xls": pd.read_excel,
+    "xlsx": pd.read_excel,
+    "xlsm": pd.read_excel,
+    "xlsb": pd.read_excel,
+}
+
 # Chat Logic
 ##Load file
-def load_file(filename):
-    df = pd.read_csv(filename)
-    st.write(df.head())
-    return df
-
+@st.cache_data(ttl="2h")
+def load_file(uploaded_file) -> pd.DataFrame | None:
+    try:
+        ext = os.path.splitext(uploaded_file.name)[1][1:].lower()
+    except:
+        ext = uploaded_file.split(".")[-1]
+    if ext in file_formats:
+        df = file_formats[ext](uploaded_file)
+        st.write(df.head())
+        return df
+    st.error(f"Unsupported file format: {ext}")
+    return None
 
 # Generate LLM Response
 def generate_langchain_response(
     df, input_query, model_name="gpt-3.5-turbo-0301", temperature=0.1, callbacks=None
-):
+) -> MutableMapping:
     response = dict()
     if model_name in ("text-davinci-003", "gpt-3.5-turbo-instruct"):
         llm = OpenAI(
@@ -111,11 +127,16 @@ def generate_langchain_response(
             )
         elif type(e) == OutputParserException:
             st.error(
-                "Unfortunately the code generated from the model contained errors and was unable to execute or parsable. Please run again"
+                "Unfortunately the code generated from the model contained errors and was unable to execute or parsable. Please run again ("
+                + str(e)
+                + ")"
             )
         else:
             st.error(
-                "Unfortunately the code generated from the model contained errors and was unable to execute. Please run again"
+                "Unfortunately the code generated from the model contained errors and was unable to execute. Please run again ("
+                + str(type(e))
+                + str(e)
+                + ")"
             )
     return response
 
@@ -140,7 +161,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<h2 style='text-align: center;padding-top: 0rem;'>Creating Visualisations and Data Analysis using Natural Language with ChatGPT</h2>",
+    "<h2 style='text-align: center;padding-top: 0rem;'>Creating Visualisations and Data Analysis using Natural Language with ChatGPT/LLM</h2>",
     unsafe_allow_html=True,
 )
 
@@ -166,7 +187,7 @@ with st.sidebar:
         )
 
 uploaded_file = st.file_uploader(
-    ":computer: Choose a file", accept_multiple_files=False, type=["csv"]
+    ":computer: Choose a file", accept_multiple_files=False, type=list(file_formats.keys())
 )
 if uploaded_file is not None:
     # read file to dataframe in dataset session state
