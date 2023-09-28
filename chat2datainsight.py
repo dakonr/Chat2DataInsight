@@ -11,14 +11,15 @@ from langchain.callbacks import StreamlitCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.schema.output_parser import OutputParserException
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from typing import MutableMapping
 
 # Models
 available_models = {
-    "ChatGPT-3.5": "gpt-3.5-turbo-0301",
-    "ChatGPT-4": "gpt-4",
     "GPT-3": "text-davinci-003",
+    #"GPT-3.5": "gpt-3.5-turbo",
     "GPT-3.5 Instruct": "gpt-3.5-turbo-instruct",
+    "ChatGPT-4": "gpt-4",
     "Code Llama Instruct": "CodeLlama-34b-Instruct-hf",
     "Code Llama Python 7b": "CodeLlama-7b-Python-hf",
 }
@@ -204,7 +205,7 @@ if prompt and btn_go:
     )
     df = st.session_state.get("dataset").copy()
     response = generate_langchain_response(
-        df, prompt, model_name=available_models.get(model_name), callbacks=[st_cb]
+        df, prompt, model_name=available_models.get(model_name), callbacks=[st_cb, StreamingStdOutCallbackHandler()]
     )
     st.write(response.get("output"))
     if len(plt.get_fignums()) > 0:
