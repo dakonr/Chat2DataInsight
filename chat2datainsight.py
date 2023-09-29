@@ -4,24 +4,23 @@ import matplotlib.pyplot as plt
 import openai
 import pandas as pd
 import streamlit as st
-from langchain import HuggingFaceHub
 from langchain.agents import create_pandas_dataframe_agent
 from langchain.agents.agent_types import AgentType
 from langchain.callbacks import StreamlitCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAI
+from langchain.llms import OpenAI, Ollama
 from langchain.schema.output_parser import OutputParserException
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from typing import MutableMapping
 
 # Models
 available_models = {
+    "GPT-3.5": "gpt-3.5-turbo-0613", #dometimes bad + unparsable results
     "GPT-3": "text-davinci-003",
-    #"GPT-3.5": "gpt-3.5-turbo",
     "GPT-3.5 Instruct": "gpt-3.5-turbo-instruct",
     "ChatGPT-4": "gpt-4",
-    "Code Llama Instruct": "CodeLlama-34b-Instruct-hf",
-    "Code Llama Python 7b": "CodeLlama-7b-Python-hf",
+    "Code Llama (local, codeassist)": "codellama:latest",
+    "Llama2 (local, codeassist)": "llama2:latest",
 }
 
 file_formats = {
@@ -49,45 +48,48 @@ def load_file(uploaded_file) -> pd.DataFrame | None:
 
 # Generate LLM Response
 def generate_langchain_response(
-    df, input_query, model_name="gpt-3.5-turbo-0301", temperature=0.1, callbacks=None
+    df, input_query, model_name="gpt-3.5-turbo-0613", temperature=0.1, callbacks=None
 ) -> MutableMapping:
     response = dict()
+    agent_kw_args = {
+        "verbose": True,
+        "agent_type": AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        "handle_parsing_errors": True,
+        "max_iterations": 5,
+    }
     if model_name in ("text-davinci-003", "gpt-3.5-turbo-instruct"):
         llm = OpenAI(
             model_name=model_name,
             temperature=temperature,
             openai_api_key=st.session_state.get("OPENAI_API_KEY"),
         )
-    elif model_name in ("gpt-3.5-turbo-0301", "gpt-3.5-turbo", "gpt-4"):
+    elif model_name in ("gpt-3.5-turbo-0613", "gpt-3.5-turbo", "gpt-4"):
         llm = ChatOpenAI(
             model_name=model_name,
             temperature=temperature,
             openai_api_key=st.session_state.get("OPENAI_API_KEY"),
         )
-    elif model_name in ("CodeLlama-34b-Instruct-hf", "CodeLlama-7b-Python-hf"):
-        # For HuggingFaceHub, the API Key must be in environment variable otherwise it won't work
-        os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.session_state.get(
-            "HUGGINGFACE_API_KEY"
-        )
-        llm = HuggingFaceHub(
-            huggingfacehub_api_token=st.session_state.get("HUGGINGFACE_API_KEY"),
-            repo_id="codellama/" + model_name,
-            model_kwargs={"temperature": 0.1, "max_new_tokens": 500},
-        )
+    elif model_name in ("codellama:latest", "llama2:latest"):
+        ######################
+        # OLLAMA SUPPORT     #
+        # need ollama        #
+        # locally installed  #
+        ######################
+        llm = Ollama(model=model_name)
+
+    
     # Pandas Dataframe Agent
     agent = create_pandas_dataframe_agent(
         llm,
         df,
-        verbose=True,
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        handle_parsing_errors=True,
-        max_iterations=5,
+        **agent_kw_args
     )
 
     # Agent Query
     try:
         response = agent(input_query, callbacks=callbacks)
     except Exception as e:
+        st.stop()
         if type(e) == openai.error.APIError:
             st.error(
                 "OpenAI API Error. Please try again a short time later. ("
@@ -144,9 +146,7 @@ def generate_langchain_response(
 
 # Frontend Logic
 def sidebar_toggle_helper() -> str:
-    if st.secrets.has_key("OPENAI_API_KEY") or st.secrets.has_key(
-        "HUGGINGFACE_API_KEY"
-    ):
+    if st.secrets.has_key("OPENAI_API_KEY"):
         return "collapsed"
     return "expanded"
 
@@ -178,14 +178,6 @@ with st.sidebar:
             type="password",
         )
 
-    if huggingface_key := st.secrets.get("HUGGINGFACE_API_KEY"):
-        st.session_state["HUGGINGFACE_API_KEY"] = huggingface_key
-    else:
-        st.session_state["HUGGINGFACE_API_KEY"] = st.text_input(
-            label=":hugging_face: HuggingFace Key:",
-            help="Required for Code Llama",
-            type="password",
-        )
 
 uploaded_file = st.file_uploader(
     ":computer: Choose a file", accept_multiple_files=False, type=list(file_formats.keys())
