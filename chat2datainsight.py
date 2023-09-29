@@ -15,7 +15,7 @@ from typing import MutableMapping
 
 # Models
 available_models = {
-    "GPT-3.5": "gpt-3.5-turbo-0613", #dometimes bad + unparsable results
+    "GPT-3.5": "gpt-3.5-turbo-0613",  # dometimes bad + unparsable results
     "GPT-3": "text-davinci-003",
     "GPT-3.5 Instruct": "gpt-3.5-turbo-instruct",
     "ChatGPT-4": "gpt-4",
@@ -45,6 +45,7 @@ def load_file(uploaded_file) -> pd.DataFrame | None:
         return df
     st.error(f"Unsupported file format: {ext}")
     return None
+
 
 # Generate LLM Response
 def generate_langchain_response(
@@ -77,13 +78,8 @@ def generate_langchain_response(
         ######################
         llm = Ollama(model=model_name)
 
-    
     # Pandas Dataframe Agent
-    agent = create_pandas_dataframe_agent(
-        llm,
-        df,
-        **agent_kw_args
-    )
+    agent = create_pandas_dataframe_agent(llm, df, **agent_kw_args)
 
     # Agent Query
     try:
@@ -180,7 +176,9 @@ with st.sidebar:
 
 
 uploaded_file = st.file_uploader(
-    ":computer: Choose a file", accept_multiple_files=False, type=list(file_formats.keys())
+    ":computer: Choose a file",
+    accept_multiple_files=False,
+    type=list(file_formats.keys()),
 )
 if uploaded_file is not None:
     # read file to dataframe in dataset session state
@@ -197,7 +195,10 @@ if prompt and btn_go:
     )
     df = st.session_state.get("dataset").copy()
     response = generate_langchain_response(
-        df, prompt, model_name=available_models.get(model_name), callbacks=[st_cb, StreamingStdOutCallbackHandler()]
+        df,
+        prompt,
+        model_name=available_models.get(model_name),
+        callbacks=[st_cb, StreamingStdOutCallbackHandler()],
     )
     st.write(response.get("output"))
     if len(plt.get_fignums()) > 0:
